@@ -79,6 +79,11 @@ export default function MapDashboard() {
   const [pendingOsCoord, setPendingOsCoord] = useState<[number, number] | null>(null);
   const [osTechId, setOsTechId] = useState<number | null>(null);
 
+  // Technician Manager State
+  const [showTechManager, setShowTechManager] = useState(false);
+  const [newTechName, setNewTechName] = useState('');
+  const [newTechUserId, setNewTechUserId] = useState('');
+
   // === SUPABASE: Initial fetch ===
   useEffect(() => {
     const fetchTechs = async () => {
@@ -253,6 +258,40 @@ export default function MapDashboard() {
     setOsTechId(null);
   };
   
+  const handleAddTech = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTechName || !newTechUserId) return;
+    
+    const { error } = await supabase
+      .from('technicians')
+      .insert([{ 
+        name: newTechName, 
+        user_id: newTechUserId, 
+        status: 'offline',
+        lat: -4.4550,
+        lng: -43.8858
+      }]);
+    
+    if (error) {
+      alert(`Erro ao adicionar técnico: ${error.message}`);
+    } else {
+      setNewTechName('');
+      setNewTechUserId('');
+      alert('Técnico adicionado com sucesso!');
+    }
+  };
+
+  const handleDeleteTech = async (id: number) => {
+    if (!confirm('Tem certeza que deseja excluir este técnico?')) return;
+    
+    const { error } = await supabase
+      .from('technicians')
+      .delete()
+      .eq('id', id);
+    
+    if (error) alert(`Erro ao excluir: ${error.message}`);
+  };
+
   const handleOptimizeRoute = async () => {
     if (!selectedTech) return;
     
@@ -343,8 +382,11 @@ export default function MapDashboard() {
           <div className="header-top">
             <h2><Lightning weight="fill" /> FlashOS</h2>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn primary small-btn" onClick={() => { setShowOsPanel(true); setOsStatusMsg(''); setIsManualMode(false); setPendingOsCoord(null); }}>
+              <button className="btn primary small-btn" onClick={() => { setShowOsPanel(true); setOsStatusMsg(''); setIsManualMode(false); setPendingOsCoord(null); setShowTechManager(false); }}>
                 <Plus /> Nova OS
+              </button>
+              <button className="btn secondary small-btn" title="Gerenciar Técnicos" onClick={() => { setShowTechManager(!showTechManager); setShowOsPanel(false); }}>
+                <User />
               </button>
               <button className="btn secondary small-btn" onClick={() => supabase.auth.signOut()}>
                 <SignOut />
@@ -438,6 +480,59 @@ export default function MapDashboard() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Technician Manager Panel */}
+      {showTechManager && (
+        <div className="action-panel glass-panel tech-manager-panel" style={{ zIndex: 101 }}>
+          <div className="action-header">
+            <h3><User /> Gerenciar Técnicos</h3>
+            <button onClick={() => setShowTechManager(false)} className="close-btn"><X /></button>
+          </div>
+          
+          <div className="tech-manager-content">
+            <form onSubmit={handleAddTech} className="add-tech-form">
+              <h4>Adicionar Novo Técnico</h4>
+              <input 
+                type="text" 
+                className="os-input" 
+                placeholder="Nome Completo" 
+                value={newTechName}
+                onChange={e => setNewTechName(e.target.value)}
+                required
+              />
+              <input 
+                type="text" 
+                className="os-input" 
+                placeholder="User ID (UUID do Supabase)" 
+                value={newTechUserId}
+                onChange={e => setNewTechUserId(e.target.value)}
+                required
+              />
+              <button type="submit" className="btn primary small-btn" style={{ width: '100%', marginTop: '8px' }}>
+                <Plus /> Salvar Técnico na Frota
+              </button>
+            </form>
+
+            <div className="divider"><span>TÉCNICOS CADASTRADOS</span></div>
+            
+            <div className="tech-manager-list">
+              {techs.length === 0 ? (
+                <p className="empty-msg">Nenhum técnico cadastrado.</p>
+              ) : (
+                techs.map(t => (
+                  <div key={t.id} className="tech-manager-item">
+                    <div className="tech-info">
+                      <strong>{t.name}</strong>
+                      <span>ID: {t.id}</span>
+                    </div>
+                    <button className="delete-btn" onClick={() => handleDeleteTech(t.id)}><X /></button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

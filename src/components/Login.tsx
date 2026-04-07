@@ -17,7 +17,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     setMessage('');
 
     if (isRegistering) {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
         setError(`Erro ao cadastrar: ${error.message}`);
         setLoading(false);
