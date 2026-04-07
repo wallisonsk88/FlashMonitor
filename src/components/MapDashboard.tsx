@@ -82,7 +82,8 @@ export default function MapDashboard() {
   // Technician Manager State
   const [showTechManager, setShowTechManager] = useState(false);
   const [newTechName, setNewTechName] = useState('');
-  const [newTechUserId, setNewTechUserId] = useState('');
+  const [newTechEmail, setNewTechEmail] = useState('');
+  const [newTechPassword, setNewTechPassword] = useState('');
 
   // === SUPABASE: Initial fetch ===
   useEffect(() => {
@@ -260,25 +261,58 @@ export default function MapDashboard() {
   
   const handleAddTech = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTechName || !newTechUserId) return;
+    if (!newTechName || !newTechEmail || !newTechPassword) return;
+
+    if (newTechPassword.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
     
-    const { error } = await supabase
+    // Use a secondary client to avoid logging out the current admin session
+    const { createClient } = await import('@supabase/supabase-js');
+    const tempClient = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false } }
+    );
+
+    alert('Criando conta do técnico... aguarde.');
+
+    // 1. Create Auth User
+    const { data: authData, error: authError } = await tempClient.auth.signUp({
+      email: newTechEmail,
+      password: newTechPassword,
+    });
+
+    if (authError) {
+      alert(`Erro na Autenticação: ${authError.message}`);
+      return;
+    }
+
+    if (!authData.user) {
+      alert('Erro inesperado: Usuário não retornado.');
+      return;
+    }
+
+    // 2. Create Technician Profile
+    const { error: dbError } = await supabase
       .from('technicians')
       .insert([{ 
         name: newTechName, 
-        user_id: newTechUserId, 
+        user_id: authData.user.id, 
         status: 'offline',
         lat: -4.4550,
         lng: -43.8858
       }]);
     
-    if (error) {
-      console.error('Erro ao adicionar técnico:', error);
-      alert(`Erro no Banco: ${error.message}\nDetalhe: ${error.details || 'Verifique o UUID'}`);
+    if (dbError) {
+      console.error('Erro ao vincular perfil:', dbError);
+      alert(`Conta criada, mas erro ao vincular perfil: ${dbError.message}\nDetalhe: ${dbError.details}`);
     } else {
       setNewTechName('');
-      setNewTechUserId('');
-      alert('Técnico adicionado com sucesso!');
+      setNewTechEmail('');
+      setNewTechPassword('');
+      alert('Técnico CADASTRADO e VINCULADO com sucesso!\nO técnico já pode logar.');
     }
   };
 
@@ -504,11 +538,19 @@ export default function MapDashboard() {
                 required
               />
               <input 
-                type="text" 
+                type="email" 
                 className="os-input" 
-                placeholder="User ID (UUID do Supabase)" 
-                value={newTechUserId}
-                onChange={e => setNewTechUserId(e.target.value)}
+                placeholder="Email do Técnico" 
+                value={newTechEmail}
+                onChange={e => setNewTechEmail(e.target.value)}
+                required
+              />
+              <input 
+                type="password" 
+                className="os-input" 
+                placeholder="Senha (mín. 6 caracteres)" 
+                value={newTechPassword}
+                onChange={e => setNewTechPassword(e.target.value)}
                 required
               />
               <button type="submit" className="btn primary small-btn" style={{ width: '100%', marginTop: '8px' }}>
