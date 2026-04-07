@@ -5,7 +5,7 @@ import { supabase } from '../supabaseClient';
 import {
   Lightning, Plus, X, Speedometer, NavigationArrow,
   ClockCounterClockwise, MagicWand, MapPinPlus,
-  MagnifyingGlass, Crosshair, Check, User, Wrench
+  MagnifyingGlass, Crosshair, Check, User, Wrench, SignOut
 } from '@phosphor-icons/react';
 
 // === TYPES ===
@@ -69,6 +69,7 @@ export default function MapDashboard() {
   const [dbConnected, setDbConnected] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [history, setHistory] = useState<Record<number, [number, number][]>>({});
+  const [routeData, setRouteData] = useState<[number, number][] | null>(null);
 
   // OS Panel State
   const [showOsPanel, setShowOsPanel] = useState(false);
@@ -200,6 +201,7 @@ export default function MapDashboard() {
     setSelectedTech(tech);
     setFocusCoord([tech.lat, tech.lng]);
     setShowHistory(false);
+    setRouteData(null); // Clear routing when switching
   };
 
   const handleApiSearch = async () => {
@@ -250,6 +252,36 @@ export default function MapDashboard() {
     setOsAddress('');
     setOsTechId(null);
   };
+  
+  const handleOptimizeRoute = async () => {
+    if (!selectedTech) return;
+    
+    // 1. Find destinations: Prioritize OS assigned to this tech, then pending ones
+    const assignedOs = osList.filter(o => (o as any).assigned_tech_id === selectedTech.id);
+    const targetOs = assignedOs.length > 0 ? assignedOs[0] : osList[0];
+    
+    if (!targetOs) {
+      alert('Nenhuma Ordem de Serviço encontrada para otimizar.');
+      return;
+    }
+    
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${selectedTech.lng},${selectedTech.lat};${targetOs.lng},${targetOs.lat}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
+        setRouteData(coords);
+        setFocusCoord([targetOs.lat, targetOs.lng]);
+      } else {
+        alert('Não foi possível calcular a rota.');
+      }
+    } catch (error) {
+      console.error('Erro no roteamento:', error);
+      alert('Erro ao conectar com serviço de mapas.');
+    }
+  };
 
   const techStatusLabel = (s: string) => s === 'moving' ? 'Em Rota' : s === 'idle' ? 'Parado' : 'Offline';
 
@@ -268,6 +300,10 @@ export default function MapDashboard() {
 
         {showHistory && selectedTech && history[selectedTech.id] && (
           <Polyline positions={history[selectedTech.id]} pathOptions={{ color: 'var(--accent-red)', weight: 4, dashArray: '10, 10', opacity: 0.7 }} />
+        )}
+
+        {routeData && (
+          <Polyline positions={routeData} pathOptions={{ color: 'var(--accent-amber)', weight: 5, opacity: 0.9 }} />
         )}
 
         {pendingOsCoord && <Marker position={pendingOsCoord} icon={createIcon(getOsIconHtml())} />}
@@ -306,9 +342,14 @@ export default function MapDashboard() {
         <header className="sidebar-header">
           <div className="header-top">
             <h2><Lightning weight="fill" /> FlashOS</h2>
-            <button className="btn primary small-btn" onClick={() => { setShowOsPanel(true); setOsStatusMsg(''); setIsManualMode(false); setPendingOsCoord(null); }}>
-              <Plus /> Nova OS
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn primary small-btn" onClick={() => { setShowOsPanel(true); setOsStatusMsg(''); setIsManualMode(false); setPendingOsCoord(null); }}>
+                <Plus /> Nova OS
+              </button>
+              <button className="btn secondary small-btn" onClick={() => supabase.auth.signOut()}>
+                <SignOut />
+              </button>
+            </div>
           </div>
           <p>Rastreamento Tempo Real</p>
         </header>
@@ -356,8 +397,8 @@ export default function MapDashboard() {
             <p className="data-row"><NavigationArrow /> Destino: <span>{selectedTech.dest}</span></p>
           </div>
           <div className="action-buttons">
-            <button className="btn primary" onClick={() => setShowHistory(true)}><ClockCounterClockwise /> Ver Trajetória</button>
-            <button className="btn secondary"><MagicWand /> Otimizar Prox. Rota</button>
+            <button className="btn primary" onClick={() => { setShowHistory(true); setRouteData(null); }}><ClockCounterClockwise /> Ver Trajetória</button>
+            <button className="btn secondary" onClick={handleOptimizeRoute}><MagicWand /> Otimizar Prox. Rota</button>
           </div>
         </div>
       )}

@@ -522,3 +522,95 @@ body {
     box-shadow: 0 0 15px var(--accent-amber-glow);
 }
 .os-marker-pin i { color: white; font-size: 16px; }
+
+/* ================== LOGIN ================== */
+.login-container {
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at center, #1e293b 0%, #121418 100%);
+}
+
+.login-card {
+    width: 100%; max-width: 400px;
+    padding: 40px; text-align: center;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.login-header h1 { font-size: 2rem; margin-top: 8px; }
+.login-header p { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+.logo-icon { 
+    font-size: 3rem; color: var(--accent-red); 
+    filter: drop-shadow(0 0 10px var(--accent-red-glow));
+}
+
+.login-form { margin-top: 32px; text-align: left; }
+.input-group { margin-bottom: 20px; }
+.input-group label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
+.input-group input {
+    width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border);
+    border-radius: 8px; color: white; outline: none;
+}
+.input-group input:focus { border-color: var(--accent-red); }
+
+.login-error { color: var(--accent-red); font-size: 0.85rem; margin-bottom: 16px; text-align: center; }
+.login-btn { width: 100%; padding: 14px; margin-top: 8px; font-size: 1rem; }
+.login-footer { margin-top: 32px; font-size: 0.75rem; color: var(--text-muted); }
+
+/* ================== TECH APP ================== */
+.tech-app {
+    width: 100vw; min-height: 100vh;
+    background-color: var(--bg-charcoal);
+    display: flex; flex-direction: column;
+}
+
+.tech-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px; border-radius: 0 0 20px 20px;
+}
+
+.tech-brand { font-weight: 800; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+.tech-brand i { color: var(--accent-red); }
+
+.logout-btn { background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer; }
+
+.tech-main { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+.tech-info-card { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.profile-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+.tech-actions { display: flex; flex-direction: column; gap: 12px; }
+
+.tracking-toggle {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 16px; border-radius: 12px; border: 2px solid var(--panel-border);
+    background: rgba(255,255,255,0.03); color: white; font-weight: 600; cursor: pointer;
+    transition: var(--transition-smooth);
+}
+.tracking-toggle.active { border-color: var(--accent-red); background: var(--accent-red-glow); }
+
+.update-msg { font-size: 0.8rem; color: var(--accent-amber); display: flex; align-items: center; gap: 6px; justify-content: center; }
+
+.tech-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.status-kpi { padding: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.status-kpi i { font-size: 1.5rem; color: var(--accent-amber); margin-bottom: 8px; }
+.status-kpi span { font-size: 1.2rem; font-weight: 700; }
+.status-kpi label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+
+.tech-orders-section h3 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 1px; }
+.orders-list { display: flex; flex-direction: column; gap: 12px; }
+
+.order-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; }
+.order-id { font-size: 0.75rem; color: var(--accent-amber); font-weight: 700; }
+.order-details p { font-size: 0.9rem; margin: 4px 0; }
+.status-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; border: 1px solid currentColor; }
+.status-tag.assigned { color: var(--accent-amber); }
+
+.btn-done { background: none; border: none; font-size: 1.8rem; color: #4ade80; cursor: pointer; opacity: 0.6; transition: 0.2s; }
+.btn-done:hover { opacity: 1; transform: scale(1.1); }
+
+.empty-orders { padding: 40px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+.tech-loading, .app-loading { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }

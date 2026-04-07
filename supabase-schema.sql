@@ -12,6 +12,7 @@ CREATE TABLE technicians (
   lng DOUBLE PRECISION NOT NULL DEFAULT -46.633308,
   speed INTEGER NOT NULL DEFAULT 0,
   dest TEXT DEFAULT '',
+  user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -22,7 +23,7 @@ CREATE TABLE service_orders (
   lat DOUBLE PRECISION NOT NULL,
   lng DOUBLE PRECISION NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'completed')),
-  assigned_tech_id INTEGER REFERENCES technicians(id),
+  assigned_tech_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -30,17 +31,13 @@ CREATE TABLE service_orders (
 ALTER PUBLICATION supabase_realtime ADD TABLE technicians;
 ALTER PUBLICATION supabase_realtime ADD TABLE service_orders;
 
--- Inserir dados de demonstração (Técnicos)
-INSERT INTO technicians (name, status, lat, lng, speed, dest) VALUES
-  ('Carlos Silva', 'moving', -23.55052, -46.633308, 45, 'Av. Paulista, 1000'),
-  ('Marcos Santos', 'idle', -23.5615, -46.6559, 0, 'R. Augusta, 500'),
-  ('Ana Oliveira', 'moving', -23.5411, -46.6433, 60, 'Centro'),
-  ('João Souza', 'offline', -23.5822, -46.6833, 0, 'Base');
-
--- Habilitar RLS (Row Level Security) aberto para o agora
-ALTER TABLE technicians ENABLE ROW LEVEL SECURITY;
-ALTER TABLE service_orders ENABLE ROW LEVEL SECURITY;
-
--- Políticas permissivas para operações do painel (anon key)
+-- Políticas permissivas para operações do painel (Administrador e Anon)
 CREATE POLICY "Allow all for technicians" ON technicians FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for service_orders" ON service_orders FOR ALL USING (true) WITH CHECK (true);
+
+-- Políticas RLS para Autenticação (Técnicos logados)
+CREATE POLICY "Technicians can only update their own position" ON technicians
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Technicians can see assigned orders" ON service_orders
+  FOR SELECT USING (auth.uid() = (SELECT user_id FROM technicians WHERE id = assigned_tech_id));
