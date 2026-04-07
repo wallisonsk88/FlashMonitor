@@ -273,7 +273,8 @@ export default function MapDashboard() {
       }]);
     
     if (error) {
-      alert(`Erro ao adicionar técnico: ${error.message}`);
+      console.error('Erro ao adicionar técnico:', error);
+      alert(`Erro no Banco: ${error.message}\nDetalhe: ${error.details || 'Verifique o UUID'}`);
     } else {
       setNewTechName('');
       setNewTechUserId('');
