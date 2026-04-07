@@ -64,6 +64,7 @@ export default function MapDashboard() {
   const [techs, setTechs] = useState<Tech[]>([]);
   const [osList, setOsList] = useState<ServiceOrder[]>([]);
   const [selectedTech, setSelectedTech] = useState<Tech | null>(null);
+  const [selectedOs, setSelectedOs] = useState<ServiceOrder | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [focusCoord, setFocusCoord] = useState<[number, number] | null>(null);
   const [dbConnected, setDbConnected] = useState(false);
@@ -207,7 +208,15 @@ export default function MapDashboard() {
     setSelectedTech(tech);
     setFocusCoord([tech.lat, tech.lng]);
     setShowHistory(false);
+    setSelectedOs(null); // Clear OS when switching to tech
     setRouteData(null); // Clear routing when switching
+  };
+
+  const handleOsClick = (os: ServiceOrder) => {
+    setSelectedOs(os);
+    setFocusCoord([os.lat, os.lng]);
+    setSelectedTech(null); // Clear tech when switching to OS
+    setRouteData(null);
   };
 
   const handleApiSearch = async () => {
@@ -316,6 +325,50 @@ export default function MapDashboard() {
     }
   };
 
+  const handleDeleteOs = async (id: number) => {
+    if (!confirm('Deseja EXCLUIR permanentemente esta OS?')) return;
+    
+    const { error } = await supabase
+      .from('service_orders')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      alert(`Erro ao excluir OS: ${error.message}`);
+    } else {
+      setSelectedOs(null);
+    }
+  };
+
+  const handleUpdateOsStatus = async (id: number, status: string) => {
+    const { error } = await supabase
+      .from('service_orders')
+      .update({ status })
+      .eq('id', id);
+    
+    if (error) {
+      alert(`Erro ao atualizar OS: ${error.message}`);
+    } else {
+      setSelectedOs(null);
+    }
+  };
+
+  const handleUpdateOsTech = async (id: number, techId: number | null) => {
+    const { error } = await supabase
+      .from('service_orders')
+      .update({ 
+        assigned_tech_id: techId,
+        status: techId ? 'assigned' : 'pending'
+      })
+      .eq('id', id);
+    
+    if (error) {
+      alert(`Erro ao reatribuir: ${error.message}`);
+    } else {
+      setSelectedOs(prev => prev ? { ...prev, assigned_tech_id: techId as any, status: techId ? 'assigned' : 'pending' } : null);
+    }
+  };
+
   const handleDeleteTech = async (id: number) => {
     if (!confirm('Tem certeza que deseja excluir este técnico?')) return;
     
@@ -383,7 +436,12 @@ export default function MapDashboard() {
         {pendingOsCoord && <Marker position={pendingOsCoord} icon={createIcon(getOsIconHtml())} />}
 
         {osList.map(os => (
-          <Marker key={os.id} position={[os.lat, os.lng]} icon={createIcon(getOsIconHtml())} />
+          <Marker 
+            key={os.id} 
+            position={[os.lat, os.lng]} 
+            icon={createIcon(getOsIconHtml())} 
+            eventHandlers={{ click: () => handleOsClick(os) }}
+          />
         ))}
       </MapContainer>
 
@@ -575,6 +633,42 @@ export default function MapDashboard() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* OS Interaction Panel */}
+      {selectedOs && !showTechManager && (
+        <div className="action-panel glass-panel os-action-panel" style={{ zIndex: 100 }}>
+          <div className="action-header">
+            <h3><Wrench weight="fill" /> Gestão de OS #{selectedOs.id}</h3>
+            <button onClick={() => setSelectedOs(null)} className="close-btn"><X /></button>
+          </div>
+          <div className="action-content">
+            <p className="os-address-label">Endereço:</p>
+            <p className="os-address-value">{selectedOs.address}</p>
+            <p className={'status-badge ' + selectedOs.status}>{selectedOs.status}</p>
+            
+            <div className="divider" style={{ margin: '12px 0' }}><span>REATRIBUIR TÉCNICO</span></div>
+            <select 
+              className="os-input small" 
+              style={{ fontSize: '0.8rem', padding: '6px' }}
+              value={(selectedOs as any).assigned_tech_id || ''} 
+              onChange={e => handleUpdateOsTech(selectedOs.id, e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Nenhum</option>
+              {techs.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="action-buttons horizontal">
+            <button className="btn primary" onClick={() => handleUpdateOsStatus(selectedOs.id, 'completed')}>
+              <Check /> Concluir
+            </button>
+            <button className="btn secondary danger" onClick={() => handleDeleteOs(selectedOs.id)}>
+              <X /> Excluir OS
+            </button>
           </div>
         </div>
       )}
