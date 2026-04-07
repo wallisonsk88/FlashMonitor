@@ -708,11 +708,12 @@ body {
     z-index: 1;
 }
 
-.tech-ui-header {
+.tech-ui-header.minimal {
     position: absolute;
     top: 20px; left: 20px; right: 20px;
     z-index: 100;
     display: flex; justify-content: space-between; align-items: center;
+    pointer-events: none; /* Allow map interaction through header area */
 }
 
 .tech-brand {
@@ -723,94 +724,27 @@ body {
     border-radius: 50px;
     display: flex; align-items: center; gap: 8px;
     font-weight: 700; color: var(--accent-amber);
+    pointer-events: auto;
 }
 
-.tech-status-card {
-    position: absolute;
-    top: 80px; left: 20px; right: 20px;
-    padding: 20px;
-    z-index: 100;
-    display: flex; flex-direction: column; gap: 12px;
-}
-
-.tech-header-info {
-    display: flex; justify-content: space-between; align-items: center;
-}
-
-.tech-header-info h2 { font-size: 1.2rem; margin-bottom: 4px; }
-
-.tech-status-text {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 0.8rem; color: var(--text-muted);
-}
-
-.tech-status-text .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--text-muted);
-}
-
-.tech-status-text .dot.active {
-    background: #4ade80;
-    box-shadow: 0 0 10px #4ade80;
-}
-
-.tech-track-btn {
-    width: 50px; height: 50px;
+.logout-minimal {
+    width: 44px; height: 44px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--panel-border);
     border-radius: 50%;
-    border: 1px solid var(--panel-border);
-    background: rgba(255, 255, 255, 0.05);
     color: white;
-    font-size: 1.4rem;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: 0.3s;
+    cursor: pointer;
+    font-size: 1.2rem;
+    pointer-events: auto;
+    transition: 0.2s;
 }
 
-.tech-track-btn.active {
-    background: var(--accent-amber);
-    color: black;
-    box-shadow: 0 0 20px var(--accent-amber-glow);
+.logout-minimal:hover {
+    background: var(--accent-red);
+    border-color: var(--accent-red);
 }
-
-.last-sync {
-    font-size: 0.7rem; color: var(--text-muted);
-    display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--panel-border);
-    padding-top: 10px;
-}
-
-.tech-bottom-sheet {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    max-height: 40vh;
-    z-index: 100;
-    border-radius: 30px 30px 0 0;
-    padding: 24px;
-    display: flex; flex-direction: column; gap: 16px;
-}
-
-.sheet-header h3 {
-    font-size: 0.9rem; letter-spacing: 1px;
-    color: var(--text-muted); text-transform: uppercase;
-    display: flex; align-items: center; gap: 8px;
-}
-
-.tech-orders-list {
-    overflow-y: auto;
-    display: flex; flex-direction: column; gap: 12px;
-}
-
-.tech-order-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--panel-border);
-    border-radius: 16px;
-    padding: 16px;
-}
-
-.order-main {
-    display: flex; justify-content: space-between; align-items: center;
-}
-
-.order-texts strong { font-size: 0.9rem; color: var(--accent-amber); display: block; margin-bottom: 4px; }
-.order-texts p { font-size: 0.85rem; }
 
 .btn-finish {
     background: none; border: none;

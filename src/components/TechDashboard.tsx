@@ -3,8 +3,7 @@ import { supabase } from '../supabaseClient';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { 
-  Lightning, SignOut, MapPin, 
-  MapPinLine, Wrench, CheckCircle, Clock, X, NavigationArrow
+  Lightning, SignOut, CheckCircle, X
 } from '@phosphor-icons/react';
 
 interface TechData {
@@ -50,8 +49,7 @@ const osIcon = L.divIcon({
 export default function TechDashboard({ user, onLogout }: { user: any, onLogout: () => void }) {
   const [tech, setTech] = useState<TechData | null>(null);
   const [orders, setOrders] = useState<AssignedOrder[]>([]);
-  const [tracking, setTracking] = useState(true); // Auto-start tracking
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [tracking] = useState(true); // Always tracking
   const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
   const [routeData, setRouteData] = useState<[number, number][] | null>(null);
   const [reportOrder, setReportOrder] = useState<AssignedOrder | null>(null);
@@ -118,8 +116,6 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
             updated_at: new Date() 
           })
           .eq('id', tech.id);
-        
-        setLastUpdate(new Date());
       });
     };
 
@@ -150,6 +146,7 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
   }, [orders, currentPos]);
 
   const handleAcceptOS = async (id: number) => {
+    if (!confirm('Deseja ACEITAR esta Ordem de Serviço e ver a rota?')) return;
     const { error } = await supabase
       .from('service_orders')
       .update({ status: 'accepted' })
@@ -208,7 +205,11 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
               icon={osIcon} 
               eventHandlers={{
                 click: () => {
-                  if (order.status === 'accepted') setReportOrder(order);
+                  if (order.status === 'assigned') {
+                    handleAcceptOS(order.id);
+                  } else if (order.status === 'accepted') {
+                    setReportOrder(order);
+                  }
                 }
               }}
             />
@@ -220,72 +221,12 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
         </MapContainer>
       </div>
 
-      <header className="tech-ui-header">
+      <header className="tech-ui-header minimal">
         <div className="tech-brand"><Lightning weight="fill" /> FlashOS</div>
-        <button onClick={handleLogout} className="action-icon-btn logout"><SignOut /></button>
+        <button onClick={handleLogout} className="logout-minimal" title="Sair"><SignOut /></button>
       </header>
 
-      {/* Floating Status Card */}
-      <div className="tech-status-card glass-panel">
-        <div className="tech-header-info">
-          <div>
-            <h2>{tech.name}</h2>
-            <p className="tech-status-text">
-              <span className={`dot ${tracking ? 'active' : ''}`}></span>
-              {tracking ? 'GPS Ativo' : 'GPS Inativo'}
-            </p>
-          </div>
-          <button 
-            className={`tech-track-btn ${tracking ? 'active' : ''}`}
-            onClick={() => setTracking(!tracking)}
-          >
-            <MapPinLine weight="bold" />
-          </button>
-        </div>
-        
-        {lastUpdate && (
-          <div className="last-sync">
-            <Clock /> Última sincronização: {lastUpdate.toLocaleTimeString()}
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Sheet for Orders */}
-      <div className="tech-bottom-sheet glass-panel">
-        <div className="sheet-header">
-          <h3><Wrench weight="fill" /> Minhas Ordens ({orders.length})</h3>
-        </div>
-        <div className="tech-orders-list">
-          {orders.length === 0 ? (
-            <div className="empty-msg">Nenhuma OS pendente.</div>
-          ) : (
-            orders.map(order => (
-              <div key={order.id} className="tech-order-card" onClick={() => { if(order.status === 'accepted') setReportOrder(order); }}>
-                <div className="order-main">
-                  <div className="order-texts">
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <strong>OS #{order.id}</strong>
-                      <span className={`status-tag-small ${order.status}`}>{order.status}</span>
-                    </div>
-                    <p>{order.address}</p>
-                  </div>
-                  <div className="order-actions-tech">
-                    {order.status === 'assigned' ? (
-                      <button className="btn-accept" onClick={(e) => { e.stopPropagation(); handleAcceptOS(order.id); }}>
-                        <NavigationArrow weight="fill" /> Aceitar
-                      </button>
-                    ) : (
-                      <div className="accepted-badge"><CheckCircle weight="fill" /></div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Completion Modal */}
+      {/* Completion Modal - Only UI that appears over the map when interacting */}
       {reportOrder && (
         <div className="completion-overlay">
           <div className="completion-modal glass-panel">
