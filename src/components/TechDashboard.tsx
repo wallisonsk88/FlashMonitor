@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { 
   Lightning, SignOut, MapPin, 
-  MapPinLine, Wrench, CheckCircle, Clock, X
+  MapPinLine, Wrench, CheckCircle, Clock, X, NavigationArrow
 } from '@phosphor-icons/react';
 
 interface TechData {
@@ -53,6 +53,7 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
   const [tracking, setTracking] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
+  const [routeData, setRouteData] = useState<[number, number][] | null>(null);
 
   // Fetch technician profile
   useEffect(() => {
@@ -125,6 +126,35 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
     return () => clearInterval(interval);
   }, [tech?.id, tracking]);
 
+  // Routing Logic
+  useEffect(() => {
+    const acceptedOrder = orders.find(o => o.status === 'accepted');
+    if (acceptedOrder && currentPos) {
+      const fetchRoute = async () => {
+        try {
+          const url = `https://router.project-osrm.org/route/v1/driving/${currentPos[1]},${currentPos[0]};${acceptedOrder.lng},${acceptedOrder.lat}?overview=full&geometries=geojson`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.routes && data.routes.length > 0) {
+            const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
+            setRouteData(coords);
+          }
+        } catch (e) { console.error('Error fetching route:', e); }
+      };
+      fetchRoute();
+    } else {
+      setRouteData(null);
+    }
+  }, [orders, currentPos]);
+
+  const handleAcceptOS = async (id: number) => {
+    const { error } = await supabase
+      .from('service_orders')
+      .update({ status: 'accepted' })
+      .eq('id', id);
+    if (error) alert('Erro ao aceitar: ' + error.message);
+  };
+
   const handleCompleteOS = async (id: number) => {
     if (!confirm('Deseja concluir esta Ordem de Serviço?')) return;
     const { error } = await supabase
@@ -163,6 +193,10 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
               icon={osIcon} 
             />
           ))}
+
+          {routeData && (
+            <Polyline positions={routeData} pathOptions={{ color: 'var(--accent-amber)', weight: 5, opacity: 0.9 }} />
+          )}
         </MapContainer>
       </div>
 
@@ -209,12 +243,23 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
               <div key={order.id} className="tech-order-card">
                 <div className="order-main">
                   <div className="order-texts">
-                    <strong>OS #{order.id}</strong>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <strong>OS #{order.id}</strong>
+                      <span className={`status-tag-small ${order.status}`}>{order.status}</span>
+                    </div>
                     <p>{order.address}</p>
                   </div>
-                  <button className="btn-finish" onClick={() => handleCompleteOS(order.id)}>
-                    <CheckCircle weight="fill" />
-                  </button>
+                  <div className="order-actions-tech">
+                    {order.status === 'assigned' ? (
+                      <button className="btn-accept" onClick={() => handleAcceptOS(order.id)}>
+                        <NavigationArrow weight="fill" /> Aceitar
+                      </button>
+                    ) : (
+                      <button className="btn-finish" onClick={() => handleCompleteOS(order.id)}>
+                        <CheckCircle weight="fill" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))

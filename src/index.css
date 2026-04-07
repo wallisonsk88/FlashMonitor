@@ -820,3 +820,40 @@ body {
 }
 
 .btn-finish:hover { transform: scale(1.1); }
+
+.order-actions-tech {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-accept {
+    background: var(--accent-amber);
+    color: black;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-accept:hover {
+    background: white;
+    box-shadow: 0 0 15px var(--accent-amber-glow);
+}
+
+.status-tag-small {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-tag-small.assigned { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.status-tag-small.accepted { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
