@@ -132,7 +132,7 @@ body {
     position: absolute;
     top: 24px;
     left: 24px;
-    width: 340px;
+    width: 380px;
     height: calc(100vh - 48px);
     display: flex;
     flex-direction: column;
@@ -140,27 +140,66 @@ body {
 
 .sidebar-header {
     padding: 24px;
-    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-.sidebar-header h2 {
+.brand h2 {
+    font-size: 1.6rem;
+    color: var(--accent-amber);
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1.5rem;
-    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.brand p {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.header-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.main-action {
+    width: 100%;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.secondary-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-icon-btn {
+    flex: 1;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
     color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
-.sidebar-header h2 i {
-    color: var(--accent-amber);
+.action-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-amber);
 }
 
-.sidebar-header p {
-    font-size: 0.85rem;
+.action-icon-btn.logout:hover {
+    border-color: var(--accent-red);
     color: var(--accent-red);
-    margin-top: 4px;
-    font-weight: 500;
 }
 
 .search-bar {

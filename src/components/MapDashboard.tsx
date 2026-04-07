@@ -472,21 +472,24 @@ export default function MapDashboard() {
       {/* Sidebar */}
       <aside className="sidebar glass-panel" style={{ zIndex: 100 }}>
         <header className="sidebar-header">
-          <div className="header-top">
+          <div className="brand">
             <h2><Lightning weight="fill" /> FlashOS</h2>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn primary small-btn" onClick={() => { setShowOsPanel(true); setOsStatusMsg(''); setIsManualMode(false); setPendingOsCoord(null); setShowTechManager(false); }}>
-                <Plus /> Nova OS
+            <p>Monitoramento de Frota</p>
+          </div>
+          
+          <div className="header-actions">
+            <button className="btn primary main-action" onClick={() => { setShowOsPanel(true); setOsStatusMsg(''); setIsManualMode(false); setPendingOsCoord(null); setShowTechManager(false); }}>
+              <Plus weight="bold" /> Nova Ordem de Serviço
+            </button>
+            <div className="secondary-actions">
+              <button className="action-icon-btn" title="Gerenciar Técnicos" onClick={() => { setShowTechManager(!showTechManager); setShowOsPanel(false); }}>
+                <User weight="bold" />
               </button>
-              <button className="btn secondary small-btn" title="Gerenciar Técnicos" onClick={() => { setShowTechManager(!showTechManager); setShowOsPanel(false); }}>
-                <User />
-              </button>
-              <button className="btn secondary small-btn" onClick={() => supabase.auth.signOut()}>
-                <SignOut />
+              <button className="action-icon-btn logout" title="Sair" onClick={() => supabase.auth.signOut()}>
+                <SignOut weight="bold" />
               </button>
             </div>
           </div>
-          <p>Rastreamento Tempo Real</p>
         </header>
         <div className="search-bar">
           <MagnifyingGlass />
