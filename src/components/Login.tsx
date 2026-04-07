@@ -16,7 +16,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
-      setError('Credenciais inválidas ou erro de conexão.');
+      console.error('Erro detalhado:', error);
+      setError(`Falha: ${error.message}`);
       setLoading(false);
     } else {
       onLogin();
