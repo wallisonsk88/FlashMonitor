@@ -16,14 +16,14 @@ CREATE TABLE technicians (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabela de Ordens de Serviço
 CREATE TABLE service_orders (
   id SERIAL PRIMARY KEY,
   address TEXT DEFAULT '',
   lat DOUBLE PRECISION NOT NULL,
   lng DOUBLE PRECISION NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'completed')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'accepted', 'completed')),
   assigned_tech_id INTEGER REFERENCES technicians(id) ON DELETE SET NULL,
+  report_notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

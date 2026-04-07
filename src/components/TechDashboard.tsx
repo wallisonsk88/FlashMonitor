@@ -50,10 +50,12 @@ const osIcon = L.divIcon({
 export default function TechDashboard({ user, onLogout }: { user: any, onLogout: () => void }) {
   const [tech, setTech] = useState<TechData | null>(null);
   const [orders, setOrders] = useState<AssignedOrder[]>([]);
-  const [tracking, setTracking] = useState(false);
+  const [tracking, setTracking] = useState(true); // Auto-start tracking
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
   const [routeData, setRouteData] = useState<[number, number][] | null>(null);
+  const [reportOrder, setReportOrder] = useState<AssignedOrder | null>(null);
+  const [equipmentDetails, setEquipmentDetails] = useState('');
 
   // Fetch technician profile
   useEffect(() => {
@@ -155,13 +157,26 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
     if (error) alert('Erro ao aceitar: ' + error.message);
   };
 
-  const handleCompleteOS = async (id: number) => {
-    if (!confirm('Deseja concluir esta Ordem de Serviço?')) return;
+  const handleCompleteOS = async () => {
+    if (!reportOrder || !equipmentDetails.trim()) {
+      alert('Por favor, descreva os equipamentos utilizados.');
+      return;
+    }
+    
     const { error } = await supabase
       .from('service_orders')
-      .update({ status: 'completed' })
-      .eq('id', id);
-    if (error) alert('Erro ao concluir: ' + error.message);
+      .update({ 
+        status: 'completed',
+        report_notes: equipmentDetails 
+      })
+      .eq('id', reportOrder.id);
+    
+    if (error) {
+      alert('Erro ao concluir: ' + error.message);
+    } else {
+      setReportOrder(null);
+      setEquipmentDetails('');
+    }
   };
 
   const handleLogout = async () => {
@@ -191,6 +206,11 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
               key={order.id} 
               position={[order.lat, order.lng]} 
               icon={osIcon} 
+              eventHandlers={{
+                click: () => {
+                  if (order.status === 'accepted') setReportOrder(order);
+                }
+              }}
             />
           ))}
 
@@ -240,7 +260,7 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
             <div className="empty-msg">Nenhuma OS pendente.</div>
           ) : (
             orders.map(order => (
-              <div key={order.id} className="tech-order-card">
+              <div key={order.id} className="tech-order-card" onClick={() => { if(order.status === 'accepted') setReportOrder(order); }}>
                 <div className="order-main">
                   <div className="order-texts">
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -251,13 +271,11 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
                   </div>
                   <div className="order-actions-tech">
                     {order.status === 'assigned' ? (
-                      <button className="btn-accept" onClick={() => handleAcceptOS(order.id)}>
+                      <button className="btn-accept" onClick={(e) => { e.stopPropagation(); handleAcceptOS(order.id); }}>
                         <NavigationArrow weight="fill" /> Aceitar
                       </button>
                     ) : (
-                      <button className="btn-finish" onClick={() => handleCompleteOS(order.id)}>
-                        <CheckCircle weight="fill" />
-                      </button>
+                      <div className="accepted-badge"><CheckCircle weight="fill" /></div>
                     )}
                   </div>
                 </div>
@@ -266,6 +284,29 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
           )}
         </div>
       </div>
+
+      {/* Completion Modal */}
+      {reportOrder && (
+        <div className="completion-overlay">
+          <div className="completion-modal glass-panel">
+            <div className="modal-header">
+              <h3>Finalizar OS #{reportOrder.id}</h3>
+              <button onClick={() => setReportOrder(null)} className="close-btn"><X /></button>
+            </div>
+            <div className="modal-body">
+              <label>Descrição dos Equipamentos Utilizados:</label>
+              <textarea 
+                placeholder="Ex: 1 Roteador TP-Link, 20m de fibra, 2 conectores..."
+                value={equipmentDetails}
+                onChange={(e) => setEquipmentDetails(e.target.value)}
+              />
+              <button className="btn primary" onClick={handleCompleteOS} style={{ width: '100%', marginTop: '16px' }}>
+                <CheckCircle weight="bold" /> Salvar Relatório e Finalizar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
