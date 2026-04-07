@@ -18,7 +18,9 @@
     --status-offline: #475569; /* Greyed out for offline since red is now used for active */
 
     --glass-blur: blur(12px);
-    --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --glass-bg: rgba(26, 30, 35, 0.65);
+    --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -62,12 +64,14 @@ body {
 
 /* ================== GLASS COMPONENT ================== */
 .glass-panel {
-    background: var(--bg-panel);
+    background: var(--glass-bg);
     backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--panel-border);
-    border-radius: 16px;
+    border-radius: 20px;
     box-shadow: var(--shadow-soft);
-    z-index: 100; /* Above Leaflet controls */
+    z-index: 100;
+    transition: var(--transition-smooth);
 }
 
 /* ================== TOP RIGHT KPIS ================== */
@@ -244,11 +248,13 @@ body {
     transition: all 0.2s;
 }
 
-.tech-item:hover, .tech-item.selected {
-    background: rgba(255, 255, 255, 0.03);
+.tech-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(4px);
 }
 
 .tech-item.selected {
+    background: rgba(255, 255, 255, 0.08);
     border-left-color: var(--accent-red);
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase } from '../supabaseClient';
@@ -41,14 +41,6 @@ function createIcon(html: string) {
   return L.divIcon({ className: 'custom-marker', html, iconSize: [30, 30], iconAnchor: [15, 15] });
 }
 
-// Fallback demo data (used only when Supabase tables are empty)
-const DEMO_TECHS: Tech[] = [
-  { id: -1, name: 'Carlos Silva', status: 'moving', lat: -23.55052, lng: -46.633308, speed: 45, dest: 'Av. Paulista, 1000' },
-  { id: -2, name: 'Marcos Santos', status: 'idle', lat: -23.5615, lng: -46.6559, speed: 0, dest: 'R. Augusta, 500' },
-  { id: -3, name: 'Ana Oliveira', status: 'moving', lat: -23.5411, lng: -46.6433, speed: 60, dest: 'Centro' },
-  { id: -4, name: 'João Souza', status: 'offline', lat: -23.5822, lng: -46.6833, speed: 0, dest: 'Base' }
-];
-
 // === MAP HELPERS ===
 function MapController({ focusTo }: { focusTo: [number, number] | null }) {
   const map = useMap();
@@ -75,6 +67,8 @@ export default function MapDashboard() {
   const [showHistory, setShowHistory] = useState(false);
   const [focusCoord, setFocusCoord] = useState<[number, number] | null>(null);
   const [dbConnected, setDbConnected] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [history, setHistory] = useState<Record<number, [number, number][]>>({});
 
   // OS Panel State
   const [showOsPanel, setShowOsPanel] = useState(false);
@@ -82,31 +76,38 @@ export default function MapDashboard() {
   const [osStatusMsg, setOsStatusMsg] = useState('');
   const [isManualMode, setIsManualMode] = useState(false);
   const [pendingOsCoord, setPendingOsCoord] = useState<[number, number] | null>(null);
+  const [osTechId, setOsTechId] = useState<number | null>(null);
 
   // === SUPABASE: Initial fetch ===
-  const fetchTechs = useCallback(async () => {
-    const { data, error } = await supabase.from('technicians').select('*');
-    if (!error && data && data.length > 0) {
-      setTechs(data as Tech[]);
-      setDbConnected(true);
-    } else {
-      // Fallback to demo data if DB is empty or error
-      setTechs(DEMO_TECHS);
-      setDbConnected(false);
-    }
-  }, []);
-
-  const fetchOrders = useCallback(async () => {
-    const { data, error } = await supabase.from('service_orders').select('*').eq('status', 'pending');
-    if (!error && data) {
-      setOsList(data as ServiceOrder[]);
-    }
-  }, []);
-
   useEffect(() => {
+    const fetchTechs = async () => {
+      const { data, error } = await supabase.from('technicians').select('*');
+      if (!error && data && data.length > 0) {
+        setTechs(data as Tech[]);
+        setDbConnected(true);
+        setHistory(prev => {
+          const next = { ...prev };
+          (data as Tech[]).forEach(t => {
+            if (!next[t.id]) next[t.id] = [[t.lat, t.lng]];
+          });
+          return next;
+        });
+      } else {
+        setTechs([]);
+        setDbConnected(false);
+      }
+    };
+
+    const fetchOrders = async () => {
+      const { data, error } = await supabase.from('service_orders').select('*').eq('status', 'pending');
+      if (!error && data) {
+        setOsList(data as ServiceOrder[]);
+      }
+    };
+
     fetchTechs();
     fetchOrders();
-  }, [fetchTechs, fetchOrders]);
+  }, []);
 
   // === SUPABASE: Realtime Subscriptions ===
   useEffect(() => {
@@ -116,8 +117,20 @@ export default function MapDashboard() {
         if (payload.eventType === 'UPDATE') {
           const updated = payload.new as Tech;
           setTechs(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t));
+          
+          // Update history on movement
+          setHistory(prev => {
+            const currentPath = prev[updated.id] || [];
+            const lastPoint = currentPath[currentPath.length - 1];
+            if (!lastPoint || lastPoint[0] !== updated.lat || lastPoint[1] !== updated.lng) {
+              return { ...prev, [updated.id]: [...currentPath.slice(-19), [updated.lat, updated.lng]] };
+            }
+            return prev;
+          });
         } else if (payload.eventType === 'INSERT') {
-          setTechs(prev => [...prev, payload.new as Tech]);
+          const nw = payload.new as Tech;
+          setTechs(prev => [...prev, nw]);
+          setHistory(prev => ({ ...prev, [nw.id]: [[nw.lat, nw.lng]] }));
         } else if (payload.eventType === 'DELETE') {
           const deleted = payload.old as { id: number };
           setTechs(prev => prev.filter(t => t.id !== deleted.id));
@@ -154,14 +167,30 @@ export default function MapDashboard() {
   useEffect(() => {
     if (dbConnected) return;
     const interval = setInterval(() => {
-      setTechs(prev => prev.map(t => {
-        if (t.status === 'moving') {
-          const newLat = t.lat + (Math.random() - 0.5) * 0.001;
-          const newLng = t.lng + (Math.random() - 0.5) * 0.001;
-          return { ...t, lat: newLat, lng: newLng, speed: Math.floor(Math.random() * 35 + 30) };
-        }
-        return t;
-      }));
+      setTechs(prev => {
+        const nextTechs = prev.map(t => {
+          if (t.status === 'moving') {
+            const newLat = t.lat + (Math.random() - 0.5) * 0.001;
+            const newLng = t.lng + (Math.random() - 0.5) * 0.001;
+            return { ...t, lat: newLat, lng: newLng, speed: Math.floor(Math.random() * 35 + 30) };
+          }
+          return t;
+        });
+
+        // Update history in demo mode
+        setHistory(hPrev => {
+          const hNext = { ...hPrev };
+          nextTechs.forEach(t => {
+            if (t.status === 'moving') {
+              const currentPath = hNext[t.id] || [];
+              hNext[t.id] = [...currentPath.slice(-19), [t.lat, t.lng]];
+            }
+          });
+          return hNext;
+        });
+
+        return nextTechs;
+      });
     }, 3000);
     return () => clearInterval(interval);
   }, [dbConnected]);
@@ -203,21 +232,23 @@ export default function MapDashboard() {
         address: osAddress || 'Manual',
         lat: pendingOsCoord[0],
         lng: pendingOsCoord[1],
-        status: 'pending'
+        status: osTechId ? 'assigned' : 'pending',
+        assigned_tech_id: osTechId
       });
       if (error) {
         alert('Erro ao salvar: ' + error.message);
         return;
       }
     } else {
-      // Demo fallback
-      setOsList(prev => [...prev, { id: Date.now(), address: osAddress || 'Manual', lat: pendingOsCoord[0], lng: pendingOsCoord[1], status: 'pending' }]);
+      // Demo fallback (only if DB is disconnected)
+      setOsList(prev => [...prev, { id: Date.now(), address: osAddress || 'Manual', lat: pendingOsCoord[0], lng: pendingOsCoord[1], status: osTechId ? 'assigned' : 'pending' }]);
     }
 
     alert('Ordem de Serviço criada com sucesso!');
     setPendingOsCoord(null);
     setShowOsPanel(false);
     setOsAddress('');
+    setOsTechId(null);
   };
 
   const techStatusLabel = (s: string) => s === 'moving' ? 'Em Rota' : s === 'idle' ? 'Parado' : 'Offline';
@@ -226,7 +257,7 @@ export default function MapDashboard() {
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }} className={isManualMode ? 'map-crosshair' : ''}>
       {/* Map */}
-      <MapContainer center={[-23.55052, -46.633308]} zoom={13} zoomControl={false} style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 1 }}>
+      <MapContainer center={[-4.4550, -43.8858]} zoom={14} zoomControl={false} style={{ width: '100%', height: '100%', position: 'absolute', zIndex: 1 }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
         <MapController focusTo={focusCoord} />
         <MapClickHandler active={isManualMode} onMapClick={(lat, lng) => { setPendingOsCoord([lat, lng]); setIsManualMode(false); setOsStatusMsg('Local marcado manualmente!'); }} />
@@ -235,8 +266,8 @@ export default function MapDashboard() {
           <Marker key={t.id} position={[t.lat, t.lng]} icon={createIcon(getTechIconHtml(t.status))} eventHandlers={{ click: () => handleTechClick(t) }} />
         ))}
 
-        {showHistory && selectedTech && (
-          <Polyline positions={[[selectedTech.lat, selectedTech.lng]]} pathOptions={{ color: '#ff2a2a', weight: 4, dashArray: '10, 10' }} />
+        {showHistory && selectedTech && history[selectedTech.id] && (
+          <Polyline positions={history[selectedTech.id]} pathOptions={{ color: 'var(--accent-red)', weight: 4, dashArray: '10, 10', opacity: 0.7 }} />
         )}
 
         {pendingOsCoord && <Marker position={pendingOsCoord} icon={createIcon(getOsIconHtml())} />}
@@ -283,10 +314,15 @@ export default function MapDashboard() {
         </header>
         <div className="search-bar">
           <MagnifyingGlass />
-          <input type="text" placeholder="Buscar técnico..." />
+          <input 
+            type="text" 
+            placeholder="Buscar técnico..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+          />
         </div>
         <div className="tech-list" id="tech-list">
-          {techs.map(t => {
+          {techs.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase())).map(t => {
             const isSelected = selectedTech?.id === t.id;
             return (
               <div key={t.id} className={'tech-item' + (isSelected ? ' selected' : '')} onClick={() => handleTechClick(t)}>
@@ -341,6 +377,18 @@ export default function MapDashboard() {
             <button className="btn secondary" onClick={() => { setIsManualMode(true); setOsStatusMsg('CLIQUE NO MAPA para marcar o local.'); }}>
               <Crosshair /> Marcar Manualmente no Mapa
             </button>
+            
+            <div className="divider"><span>ATRIBUIR TÉCNICO</span></div>
+            <select 
+              className="os-input" 
+              value={osTechId || ''} 
+              onChange={e => setOsTechId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Sem técnico atribuído</option>
+              {techs.map(t => (
+                <option key={t.id} value={t.id}>{t.name} ({techStatusLabel(t.status)})</option>
+              ))}
+            </select>
           </div>
           {pendingOsCoord && (
             <div className="action-buttons" style={{ marginTop: '16px' }}>
