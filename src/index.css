@@ -712,6 +712,13 @@ body {
     display: none;
 }
 
+/* Force-hide any sidebar elements in technician view */
+.tech-app .sidebar, 
+.tech-app aside, 
+.tech-app .sidebar-header {
+    display: none !important;
+}
+
 .floating-logout {
     position: absolute;
     top: 20px; right: 20px;
