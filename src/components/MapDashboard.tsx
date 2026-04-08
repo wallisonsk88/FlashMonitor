@@ -180,11 +180,16 @@ export default function MapDashboard() {
     const fetchAllRoutes = async () => {
       const newRoutes: Record<number, [number, number][]> = {};
       
+      console.log('🤖 Auto-Routing: Checking techs', techs.length, 'and OS', osList.length);
+
       for (const tech of techs) {
-        // Find if this tech has an accepted OS
-        const activeOs = osList.find(o => (o as any).assigned_tech_id === tech.id && o.status === 'accepted');
+        // Find if this tech has an accepted OS (using loose equality for safety)
+        const activeOs = osList.find(o => 
+          (o as any).assigned_tech_id == tech.id && (o.status === 'accepted' || (o as any).status === 'accepted')
+        );
         
         if (activeOs) {
+          console.log(`✅ Tech ${tech.name} has active OS #${activeOs.id}. Fetching route...`);
           try {
             const url = `https://router.project-osrm.org/route/v1/driving/${tech.lng},${tech.lat};${activeOs.lng},${activeOs.lat}?overview=full&geometries=geojson`;
             const res = await fetch(url);
@@ -195,7 +200,7 @@ export default function MapDashboard() {
               newRoutes[tech.id] = coords;
             }
           } catch (e) {
-            console.error(`Error fetching route for tech ${tech.id}:`, e);
+            console.error(`❌ Error fetching route for tech ${tech.id}:`, e);
           }
         }
       }
