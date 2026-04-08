@@ -54,7 +54,7 @@ function App() {
       {isTech ? (
         <TechDashboard user={session.user} onLogout={() => {}} />
       ) : (
-        <MapDashboard />
+        <MapDashboard user={session.user} />
       )}
     </>
   );

@@ -60,7 +60,7 @@ function MapClickHandler({ onMapClick, active }: { onMapClick: (lat: number, lng
 }
 
 // === MAIN COMPONENT ===
-export default function MapDashboard() {
+export default function MapDashboard({ user }: { user?: any }) {
   const [techs, setTechs] = useState<Tech[]>([]);
   const [osList, setOsList] = useState<ServiceOrder[]>([]);
   const [selectedTech, setSelectedTech] = useState<Tech | null>(null);
@@ -488,7 +488,7 @@ export default function MapDashboard() {
         <header className="sidebar-header">
           <div className="brand">
             <h2><Lightning weight="fill" /> FlashOS</h2>
-            <p>Monitoramento de Frota</p>
+            <p>Admin: {user?.email || 'Sistema'}</p>
           </div>
           
           <div className="header-actions">
