@@ -185,7 +185,7 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
 
   return (
     <div className="tech-app">
-      {/* Background Map */}
+      {/* Background Map - 100% Full Screen */}
       <div className="tech-map-container">
         <MapContainer 
           center={currentPos || [-4.4550, -43.8858]} 
@@ -221,12 +221,13 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
         </MapContainer>
       </div>
 
-      <header className="tech-ui-header minimal">
-        <div className="tech-brand"><Lightning weight="fill" /> FlashOS</div>
-        <button onClick={handleLogout} className="logout-minimal" title="Sair"><SignOut /></button>
-      </header>
+      {/* Floating Controls */}
+      <div className="tech-floating-ui">
+        <div className="tech-logo-fab"><Lightning weight="fill" /></div>
+        <button onClick={handleLogout} className="logout-fab" title="Sair do Sistema"><SignOut /></button>
+      </div>
 
-      {/* Completion Modal - Only UI that appears over the map when interacting */}
+      {/* Completion Modal */}
       {reportOrder && (
         <div className="completion-overlay">
           <div className="completion-modal glass-panel">
@@ -235,14 +236,14 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
               <button onClick={() => setReportOrder(null)} className="close-btn"><X /></button>
             </div>
             <div className="modal-body">
-              <label>Descrição dos Equipamentos Utilizados:</label>
+              <label>Equipamentos Utilizados:</label>
               <textarea 
-                placeholder="Ex: 1 Roteador TP-Link, 20m de fibra, 2 conectores..."
+                placeholder="Ex: 1 Roteador, 20m de fibra..."
                 value={equipmentDetails}
                 onChange={(e) => setEquipmentDetails(e.target.value)}
               />
               <button className="btn primary" onClick={handleCompleteOS} style={{ width: '100%', marginTop: '16px' }}>
-                <CheckCircle weight="bold" /> Salvar Relatório e Finalizar
+                <CheckCircle weight="bold" /> Salvar e Finalizar OS
               </button>
             </div>
           </div>
