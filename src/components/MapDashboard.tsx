@@ -4,7 +4,7 @@ import L from 'leaflet';
 import { supabase } from '../supabaseClient';
 import {
   Lightning, Plus, X, Speedometer, NavigationArrow,
-  ClockCounterClockwise, MagicWand, MapPinPlus,
+  ClockCounterClockwise, MapPinPlus,
   MagnifyingGlass, Crosshair, Check, User, Wrench, SignOut
 } from '@phosphor-icons/react';
 
@@ -70,7 +70,7 @@ export default function MapDashboard() {
   const [dbConnected, setDbConnected] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [history, setHistory] = useState<Record<number, [number, number][]>>({});
-  const [routeData, setRouteData] = useState<[number, number][] | null>(null);
+  const [activeRoutes, setActiveRoutes] = useState<Record<number, [number, number][]>>({});
 
   // OS Panel State
   const [showOsPanel, setShowOsPanel] = useState(false);
@@ -107,7 +107,11 @@ export default function MapDashboard() {
     };
 
     const fetchOrders = async () => {
-      const { data, error } = await supabase.from('service_orders').select('*').eq('status', 'pending');
+      const { data, error } = await supabase
+        .from('service_orders')
+        .select('*')
+        .neq('status', 'completed');
+      
       if (!error && data) {
         setOsList(data as ServiceOrder[]);
       }
@@ -153,7 +157,7 @@ export default function MapDashboard() {
           setOsList(prev => [...prev, payload.new as ServiceOrder]);
         } else if (payload.eventType === 'UPDATE') {
           const updated = payload.new as ServiceOrder;
-          if (updated.status !== 'pending') {
+          if (updated.status === 'completed') {
             setOsList(prev => prev.filter(o => o.id !== updated.id));
           } else {
             setOsList(prev => prev.map(o => o.id === updated.id ? { ...o, ...updated } : o));
@@ -170,6 +174,37 @@ export default function MapDashboard() {
       supabase.removeChannel(osChannel);
     };
   }, []);
+
+  // === AUTO-ROUTING LOGIC ===
+  useEffect(() => {
+    const fetchAllRoutes = async () => {
+      const newRoutes: Record<number, [number, number][]> = {};
+      
+      for (const tech of techs) {
+        // Find if this tech has an accepted OS
+        const activeOs = osList.find(o => (o as any).assigned_tech_id === tech.id && o.status === 'accepted');
+        
+        if (activeOs) {
+          try {
+            const url = `https://router.project-osrm.org/route/v1/driving/${tech.lng},${tech.lat};${activeOs.lng},${activeOs.lat}?overview=full&geometries=geojson`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.routes && data.routes.length > 0) {
+              const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
+              newRoutes[tech.id] = coords;
+            }
+          } catch (e) {
+            console.error(`Error fetching route for tech ${tech.id}:`, e);
+          }
+        }
+      }
+      setActiveRoutes(newRoutes);
+    };
+
+    const debounceTimer = setTimeout(fetchAllRoutes, 2000);
+    return () => clearTimeout(debounceTimer);
+  }, [techs, osList]);
 
   // === Simulation for DEMO mode (only when DB is not connected) ===
   useEffect(() => {
@@ -209,14 +244,12 @@ export default function MapDashboard() {
     setFocusCoord([tech.lat, tech.lng]);
     setShowHistory(false);
     setSelectedOs(null); // Clear OS when switching to tech
-    setRouteData(null); // Clear routing when switching
   };
 
   const handleOsClick = (os: ServiceOrder) => {
     setSelectedOs(os);
     setFocusCoord([os.lat, os.lng]);
     setSelectedTech(null); // Clear tech when switching to OS
-    setRouteData(null);
   };
 
   const handleApiSearch = async () => {
@@ -380,35 +413,6 @@ export default function MapDashboard() {
     if (error) alert(`Erro ao excluir: ${error.message}`);
   };
 
-  const handleOptimizeRoute = async () => {
-    if (!selectedTech) return;
-    
-    // 1. Find destinations: Prioritize OS assigned to this tech, then pending ones
-    const assignedOs = osList.filter(o => (o as any).assigned_tech_id === selectedTech.id);
-    const targetOs = assignedOs.length > 0 ? assignedOs[0] : osList[0];
-    
-    if (!targetOs) {
-      alert('Nenhuma Ordem de Serviço encontrada para otimizar.');
-      return;
-    }
-    
-    try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${selectedTech.lng},${selectedTech.lat};${targetOs.lng},${targetOs.lat}?overview=full&geometries=geojson`;
-      const res = await fetch(url);
-      const data = await res.json();
-      
-      if (data.routes && data.routes.length > 0) {
-        const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
-        setRouteData(coords);
-        setFocusCoord([targetOs.lat, targetOs.lng]);
-      } else {
-        alert('Não foi possível calcular a rota.');
-      }
-    } catch (error) {
-      console.error('Erro no roteamento:', error);
-      alert('Erro ao conectar com serviço de mapas.');
-    }
-  };
 
   const techStatusLabel = (s: string) => s === 'moving' ? 'Em Rota' : s === 'idle' ? 'Parado' : 'Offline';
 
@@ -429,9 +433,19 @@ export default function MapDashboard() {
           <Polyline positions={history[selectedTech.id]} pathOptions={{ color: 'var(--accent-red)', weight: 4, dashArray: '10, 10', opacity: 0.7 }} />
         )}
 
-        {routeData && (
-          <Polyline positions={routeData} pathOptions={{ color: 'var(--accent-amber)', weight: 5, opacity: 0.9 }} />
-        )}
+        {/* Real-time Routes for all active technicians */}
+        {Object.entries(activeRoutes).map(([techId, route]) => (
+          <Polyline 
+            key={techId}
+            positions={route} 
+            pathOptions={{ 
+              color: Number(techId) % 2 === 0 ? 'var(--accent-amber)' : '#00e5ff', 
+              weight: 5, 
+              opacity: 0.8,
+              lineCap: 'round'
+            }} 
+          />
+        ))}
 
         {pendingOsCoord && <Marker position={pendingOsCoord} icon={createIcon(getOsIconHtml())} />}
 
@@ -535,8 +549,7 @@ export default function MapDashboard() {
             <p className="data-row"><NavigationArrow /> Destino: <span>{selectedTech.dest}</span></p>
           </div>
           <div className="action-buttons">
-            <button className="btn primary" onClick={() => { setShowHistory(true); setRouteData(null); }}><ClockCounterClockwise /> Ver Trajetória</button>
-            <button className="btn secondary" onClick={handleOptimizeRoute}><MagicWand /> Otimizar Prox. Rota</button>
+            <button className="btn primary" onClick={() => setShowHistory(true)}><ClockCounterClockwise /> Ver Trajetória</button>
           </div>
         </div>
       )}
