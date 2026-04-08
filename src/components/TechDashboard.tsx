@@ -185,7 +185,7 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
 
   return (
     <div className="tech-app">
-      {/* Background Map */}
+      {/* Background Map - The only primary UI */}
       <div className="tech-map-container">
         <MapContainer 
           center={currentPos || [-4.4550, -43.8858]} 
@@ -204,13 +204,7 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
               position={[order.lat, order.lng]} 
               icon={osIcon} 
               eventHandlers={{
-                click: () => {
-                  if (order.status === 'assigned') {
-                    handleAcceptOS(order.id);
-                  } else if (order.status === 'accepted') {
-                    setReportOrder(order);
-                  }
-                }
+                click: () => setReportOrder(order)
               }}
             />
           ))}
@@ -221,29 +215,49 @@ export default function TechDashboard({ user, onLogout }: { user: any, onLogout:
         </MapContainer>
       </div>
 
-      <header className="tech-ui-header minimal">
-        <div className="tech-brand"><Lightning weight="fill" /> FlashOS</div>
-        <button onClick={handleLogout} className="logout-minimal" title="Sair"><SignOut /></button>
-      </header>
+      {/* Discrete Logout Button */}
+      <button onClick={handleLogout} className="floating-logout" title="Sair"><SignOut /></button>
 
-      {/* Completion Modal - Only UI that appears over the map when interacting */}
+      {/* Interactive OS Details Card (Floating Overlay) */}
       {reportOrder && (
-        <div className="completion-overlay">
-          <div className="completion-modal glass-panel">
-            <div className="modal-header">
-              <h3>Finalizar OS #{reportOrder.id}</h3>
-              <button onClick={() => setReportOrder(null)} className="close-btn"><X /></button>
+        <div className="os-details-overlay">
+          <div className="details-card glass-panel">
+            <div className="details-header">
+              <h3>ORDEM DE SERVIÇO #{reportOrder.id}</h3>
+              <button onClick={() => setReportOrder(null)} className="close-btn-minimal"><X /></button>
             </div>
-            <div className="modal-body">
-              <label>Descrição dos Equipamentos Utilizados:</label>
-              <textarea 
-                placeholder="Ex: 1 Roteador TP-Link, 20m de fibra, 2 conectores..."
-                value={equipmentDetails}
-                onChange={(e) => setEquipmentDetails(e.target.value)}
-              />
-              <button className="btn primary" onClick={handleCompleteOS} style={{ width: '100%', marginTop: '16px' }}>
-                <CheckCircle weight="bold" /> Salvar Relatório e Finalizar
-              </button>
+            
+            <div className="details-body">
+              <div className="info-group">
+                <label>Endereço de Atendimento:</label>
+                <p>{reportOrder.address}</p>
+              </div>
+
+              <div className="info-group">
+                <label>Status Atual:</label>
+                <span className={`status-tag-small ${reportOrder.status}`}>{reportOrder.status}</span>
+              </div>
+
+              {reportOrder.status === 'assigned' ? (
+                <div className="details-actions">
+                  <p className="hint">Aceite a OS para visualizar a rota otimizada até o local.</p>
+                  <button className="btn primary full-width" onClick={() => handleAcceptOS(reportOrder.id)}>
+                    <CheckCircle weight="bold" /> ACEITAR CHAMADO
+                  </button>
+                </div>
+              ) : (
+                <div className="details-report-area">
+                  <label>Relatar Equipamentos Utilizados:</label>
+                  <textarea 
+                    placeholder="Descreva aqui os materiais usados (Ex: 1 Roteador, 20m fibra...)"
+                    value={equipmentDetails}
+                    onChange={(e) => setEquipmentDetails(e.target.value)}
+                  />
+                  <button className="btn primary full-width" onClick={handleCompleteOS}>
+                    <CheckCircle weight="bold" /> FINALIZAR ATENDIMENTO
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
