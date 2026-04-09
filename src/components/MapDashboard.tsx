@@ -90,7 +90,10 @@ export default function MapDashboard({ user }: { user?: any }) {
   useEffect(() => {
     const fetchTechs = async () => {
       const { data, error } = await supabase.from('technicians').select('*');
-      if (!error && data && data.length > 0) {
+      if (error) {
+        console.error('Erro ao buscar técnicos:', error);
+      }
+      if (data && data.length > 0) {
         setTechs(data as Tech[]);
         setDbConnected(true);
         setHistory(prev => {
@@ -112,7 +115,10 @@ export default function MapDashboard({ user }: { user?: any }) {
         .select('*')
         .neq('status', 'completed');
       
-      if (!error && data) {
+      if (error) {
+        console.error('Erro ao buscar ordens de serviço:', error);
+      }
+      if (data) {
         setOsList(data as ServiceOrder[]);
       }
     };
@@ -315,7 +321,14 @@ export default function MapDashboard({ user }: { user?: any }) {
     const tempClient = createClient(
       import.meta.env.VITE_SUPABASE_URL,
       import.meta.env.VITE_SUPABASE_ANON_KEY,
-      { auth: { persistSession: false } }
+      { 
+        auth: { 
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+          storageKey: 'supabase.auth.temp-admin' // Unique key to avoid conflicts
+        } 
+      }
     );
 
     alert('Criando conta do técnico... aguarde.');
@@ -327,7 +340,8 @@ export default function MapDashboard({ user }: { user?: any }) {
     });
 
     if (authError) {
-      alert(`Erro na Autenticação: ${authError.message}`);
+      console.error('Erro detalhado no cadastro auth:', authError);
+      alert(`Erro na Autenticação: ${authError.message} (${authError.status})`);
       return;
     }
 

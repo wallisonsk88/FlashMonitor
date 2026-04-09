@@ -17,7 +17,8 @@ function App() {
   const ADMIN_EMAILS = ['wallisonsk88@gmail.com']; // Placeholder robusto baseado no repo
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) console.error('Erro ao buscar sessão:', error);
       setSession(session);
       if (session) checkRole(session);
       else setLoading(false);
@@ -46,11 +47,15 @@ function App() {
     }
 
     // 2. Check if is Technician (Registered by Admin)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('technicians')
       .select('id')
       .eq('user_id', session.user.id)
       .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 is code for "no rows returned" which is expected for non-techs
+      console.error('Erro ao verificar cargo de técnico:', error);
+    }
     
     if (data) {
       setUserRole('tech');

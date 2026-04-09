@@ -27,6 +27,10 @@ CREATE TABLE service_orders (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Habilitar RLS (Segurança por Linha)
+ALTER TABLE technicians ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_orders ENABLE ROW LEVEL SECURITY;
+
 -- Habilitar Realtime para ambas tabelas
 ALTER PUBLICATION supabase_realtime ADD TABLE technicians;
 ALTER PUBLICATION supabase_realtime ADD TABLE service_orders;
